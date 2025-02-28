@@ -3,13 +3,14 @@ package fetcher
 import (
 	"context"
 	"log"
-	"news-feed-bot/internal/model"
-	src "news-feed-bot/internal/source"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/tomakado/containers/set"
+	"go.tomakado.io/containers/set"
+
+	"news-feed-bot/internal/model"
+	src "news-feed-bot/internal/source"
 )
 
 type ArticleStorage interface {
@@ -27,8 +28,9 @@ type Source interface {
 }
 
 type Fetcher struct {
-	articles       ArticleStorage
-	sources        SourcesProvider
+	articles ArticleStorage
+	sources  SourcesProvider
+
 	fetchInterval  time.Duration
 	filterKeywords []string
 }
@@ -47,7 +49,7 @@ func New(
 	}
 }
 
-func (f *Fetcher) Run(ctx context.Context) error {
+func (f *Fetcher) Start(ctx context.Context) error {
 	ticker := time.NewTicker(f.fetchInterval)
 	defer ticker.Stop()
 
@@ -73,13 +75,10 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 		return err
 	}
 
-	// добавляем waitgroup тк источников статей много
 	var wg sync.WaitGroup
 
 	for _, source := range sources {
 		wg.Add(1)
-
-		rssSource := src.NewRSSSourceFromModel(source)
 
 		go func(source Source) {
 			defer wg.Done()
@@ -94,12 +93,12 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 				log.Printf("[ERROR] failed to process items from source %q: %v", source.Name(), err)
 				return
 			}
-
-		}(rssSource)
-
-		wg.Wait()
-		return nil
+		}(src.NewRSSSourceFromModel(source))
 	}
+
+	wg.Wait()
+
+	return nil
 }
 
 func (f *Fetcher) processItems(ctx context.Context, source Source, items []model.Item) error {
@@ -107,6 +106,7 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 		item.Date = item.Date.UTC()
 
 		if f.itemShouldBeSkipped(item) {
+			log.Printf("[INFO] item %q (%s) from source %q should be skipped", item.Title, item.Link, source.Name())
 			continue
 		}
 
@@ -126,6 +126,7 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 
 func (f *Fetcher) itemShouldBeSkipped(item model.Item) bool {
 	categoriesSet := set.New(item.Categories...)
+
 	for _, keyword := range f.filterKeywords {
 		if categoriesSet.Contains(keyword) || strings.Contains(strings.ToLower(item.Title), keyword) {
 			return true
