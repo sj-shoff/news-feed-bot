@@ -13,6 +13,7 @@ type SourcePostgresStorage struct {
 	db *sqlx.DB
 }
 
+// получаем список источников
 func (s *SourcePostgresStorage) Sources(ctx context.Context) ([]model.Source, error) {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
@@ -28,6 +29,7 @@ func (s *SourcePostgresStorage) Sources(ctx context.Context) ([]model.Source, er
 	return lo.Map(sources, func(source dbSource, _ int) model.Source { return model.Source(source) }), nil
 }
 
+// получаем источник по его id
 func (s *SourcePostgresStorage) SourceById(ctx context.Context, id int64) (*model.Source, error) {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
@@ -43,6 +45,7 @@ func (s *SourcePostgresStorage) SourceById(ctx context.Context, id int64) (*mode
 	return (*model.Source)(&source), nil
 }
 
+// добавляем источник
 func (s *SourcePostgresStorage) Add(ctx context.Context, source model.Source) (int64, error) {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
@@ -71,6 +74,7 @@ func (s *SourcePostgresStorage) Add(ctx context.Context, source model.Source) (i
 	return id, nil
 }
 
+// удаляем источник
 func (s *SourcePostgresStorage) Delete(ctx context.Context, id int64) error {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
@@ -85,6 +89,7 @@ func (s *SourcePostgresStorage) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+// структура источника
 type dbSource struct {
 	ID        int64     `db:"id"`
 	Name      string    `db:"name"`

@@ -2,7 +2,7 @@ package fetcher
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -28,9 +28,8 @@ type Source interface {
 }
 
 type Fetcher struct {
-	articles ArticleStorage
-	sources  SourcesProvider
-
+	articles       ArticleStorage
+	sources        SourcesProvider
 	fetchInterval  time.Duration
 	filterKeywords []string
 }
@@ -85,12 +84,12 @@ func (f *Fetcher) Fetch(ctx context.Context) error {
 
 			items, err := source.Fetch(ctx)
 			if err != nil {
-				log.Printf("[ERROR] failed to fetch items from source %q: %v", source.Name(), err)
+				slog.Error("Failed to fetch items from source %q: %v", source.Name(), err)
 				return
 			}
 
 			if err := f.processItems(ctx, source, items); err != nil {
-				log.Printf("[ERROR] failed to process items from source %q: %v", source.Name(), err)
+				slog.Error("Failed to process items from source %q: %v", source.Name(), err)
 				return
 			}
 		}(src.NewRSSSourceFromModel(source))
@@ -106,7 +105,14 @@ func (f *Fetcher) processItems(ctx context.Context, source Source, items []model
 		item.Date = item.Date.UTC()
 
 		if f.itemShouldBeSkipped(item) {
-			log.Printf("[INFO] item %q (%s) from source %q should be skipped", item.Title, item.Link, source.Name())
+			slog.Info("Skipping item",
+				"item", map[string]any{
+					"title":  item.Title,
+					"link":   item.Link,
+					"source": source.Name(),
+				},
+				"reason", "item should be skipped",
+			)
 			continue
 		}
 
