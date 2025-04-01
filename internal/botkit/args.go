@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 )
 
+// ParseJSON распарсит json в структуру с помощью стандартного json пакета
 func ParseJSON[T any](src string) (T, error) {
 	var args T
 
