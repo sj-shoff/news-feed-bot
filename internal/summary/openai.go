@@ -4,80 +4,118 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"news-feed-bot/internal/logger/sl"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/sashabaranov/go-openai"
 )
 
+type Summarizer interface {
+	Summarize(ctx context.Context, text string) (string, error)
+}
+
+type SummaryConfig struct {
+	Prompt      string
+	Model       string
+	MaxTokens   int
+	Temperature float32
+	TopP        float32
+}
+
 type OpenAISummarizer struct {
-	client  *openai.Client // Клиент для работы с OpenAI API
-	prompt  string         // Системный промпт для модели
-	model   string         // Название модели
-	enabled bool           // Флаг активности сервиса
-	mu      sync.Mutex     // Мьютекс для потокобезопасности
+	client  *openai.Client
+	config  SummaryConfig
+	logger  *slog.Logger
+	enabled bool
+	mu      sync.Mutex
 }
 
-func NewOpenAISummarizer(apiKey string, prompt string) *OpenAISummarizer {
-	s := &OpenAISummarizer{
-		client: openai.NewClient(apiKey),
-		prompt: prompt,
+func NewOpenAISummarizer(client *openai.Client, config SummaryConfig, log *slog.Logger) Summarizer {
+
+	enabled := client != nil
+	log = log.With(
+		slog.String("component", "OpenAISummarizer"),
+		slog.Bool("enabled", enabled),
+		slog.String("model", config.Model),
+	)
+
+	if enabled {
+		log.Info("initializing OpenAI summarizer")
 	}
 
-	slog.Info("OpenAI summarizer enabled: %v", apiKey != "")
-
-	if apiKey != "" {
-		s.enabled = true
+	return &OpenAISummarizer{
+		client:  client,
+		config:  config,
+		logger:  log,
+		enabled: enabled,
 	}
-
-	return s
 }
 
-func (s *OpenAISummarizer) Summarize(text string) (string, error) {
+func (s *OpenAISummarizer) Summarize(ctx context.Context, text string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	log := s.logger
 	if !s.enabled {
-		slog.Error("Openai summarizer is disabled")
-		return "", errors.New("Openai summarizer is disabled")
+		log.Error("summarizer disabled")
+		return "", errors.New("OpenAI summarizer is disabled")
 	}
+
+	s.logger.Debug("starting summarization")
 
 	request := openai.ChatCompletionRequest{
-		Model: s.model,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: s.prompt,
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: text,
-			},
-		},
-		MaxTokens:   1024,
-		Temperature: 1,
-		TopP:        1,
+		Model:       s.config.Model,
+		Messages:    s.createMessages(text),
+		MaxTokens:   s.config.MaxTokens,
+		Temperature: s.config.Temperature,
+		TopP:        s.config.TopP,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
+	log.Debug("sending request to OpenAI")
 
 	resp, err := s.client.CreateChatCompletion(ctx, request)
 	if err != nil {
-		return "", err
+		log.Error("API request failed", sl.Err(err))
+		return "", errors.New("API request failed: " + err.Error())
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", errors.New("no choices in openai response")
+		log.Error("empty response from OpenAI")
+		return "", errors.New("empty response from OpenAI")
 	}
 
 	rawSummary := strings.TrimSpace(resp.Choices[0].Message.Content)
+	result := ensureSentenceEnding(rawSummary)
 
-	if strings.HasSuffix(rawSummary, ".") {
-		return rawSummary, nil
+	log.Debug("summarization completed",
+		slog.Int("result_length", len(result)))
+
+	return result, nil
+}
+
+func (s *OpenAISummarizer) createMessages(text string) []openai.ChatCompletionMessage {
+	return []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: s.config.Prompt,
+		},
+		{
+			Role:    openai.ChatMessageRoleUser,
+			Content: text,
+		},
+	}
+}
+
+func ensureSentenceEnding(s string) string {
+	if strings.HasSuffix(s, ".") {
+		return s
 	}
 
-	sentences := strings.Split(rawSummary, ".")
-	return strings.Join(sentences[:len(sentences)-1], ".") + ".", nil
+	lastDot := strings.LastIndex(s, ".")
+	if lastDot == -1 {
+		return s + "."
+	}
+
+	return s[:lastDot+1]
 }
