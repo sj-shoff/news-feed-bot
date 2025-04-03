@@ -32,7 +32,6 @@ type OpenAISummarizer struct {
 }
 
 func NewOpenAISummarizer(client *openai.Client, config SummaryConfig, log *slog.Logger) Summarizer {
-
 	enabled := client != nil
 	log = log.With(
 		slog.String("component", "OpenAISummarizer"),
@@ -62,16 +61,9 @@ func (s *OpenAISummarizer) Summarize(ctx context.Context, text string) (string, 
 		return "", errors.New("OpenAI summarizer is disabled")
 	}
 
-	s.logger.Debug("starting summarization")
+	log.Debug("starting summarization")
 
-	request := openai.ChatCompletionRequest{
-		Model:       s.config.Model,
-		Messages:    s.createMessages(text),
-		MaxTokens:   s.config.MaxTokens,
-		Temperature: s.config.Temperature,
-		TopP:        s.config.TopP,
-	}
-
+	request := s.createRequest(text)
 	log.Debug("sending request to OpenAI")
 
 	resp, err := s.client.CreateChatCompletion(ctx, request)
@@ -80,18 +72,26 @@ func (s *OpenAISummarizer) Summarize(ctx context.Context, text string) (string, 
 		return "", errors.New("API request failed: " + err.Error())
 	}
 
-	if len(resp.Choices) == 0 {
-		log.Error("empty response from OpenAI")
-		return "", errors.New("empty response from OpenAI")
+	summary, err := s.extractSummary(resp)
+	if err != nil {
+		log.Error("failed to extract summary", sl.Err(err))
+		return "", err
 	}
 
-	rawSummary := strings.TrimSpace(resp.Choices[0].Message.Content)
-	result := ensureSentenceEnding(rawSummary)
-
 	log.Debug("summarization completed",
-		slog.Int("result_length", len(result)))
+		slog.Int("result_length", len(summary)))
 
-	return result, nil
+	return summary, nil
+}
+
+func (s *OpenAISummarizer) createRequest(text string) openai.ChatCompletionRequest {
+	return openai.ChatCompletionRequest{
+		Model:       s.config.Model,
+		Messages:    s.createMessages(text),
+		MaxTokens:   s.config.MaxTokens,
+		Temperature: s.config.Temperature,
+		TopP:        s.config.TopP,
+	}
 }
 
 func (s *OpenAISummarizer) createMessages(text string) []openai.ChatCompletionMessage {
@@ -105,6 +105,16 @@ func (s *OpenAISummarizer) createMessages(text string) []openai.ChatCompletionMe
 			Content: text,
 		},
 	}
+}
+
+func (s *OpenAISummarizer) extractSummary(resp openai.ChatCompletionResponse) (string, error) {
+	if len(resp.Choices) == 0 {
+		return "", errors.New("empty response from OpenAI")
+	}
+
+	rawSummary := strings.TrimSpace(resp.Choices[0].Message.Content)
+	result := ensureSentenceEnding(rawSummary)
+	return result, nil
 }
 
 func ensureSentenceEnding(s string) string {
