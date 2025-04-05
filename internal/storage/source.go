@@ -13,6 +13,11 @@ type SourcePostgresStorage struct {
 	db *sqlx.DB
 }
 
+// конструктор хранилища источников
+func NewSourceStorage(db *sqlx.DB) *SourcePostgresStorage {
+	return &SourcePostgresStorage{db: db}
+}
+
 // получаем список источников
 func (s *SourcePostgresStorage) Sources(ctx context.Context) ([]model.Source, error) {
 	conn, err := s.db.Connx(ctx)

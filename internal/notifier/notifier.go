@@ -4,24 +4,27 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"news-feed-bot/internal/botkit/markup"
-	"news-feed-bot/internal/model"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/go-shiori/go-readability"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"news-feed-bot/internal/botkit/markup"
+	"news-feed-bot/internal/logger/sl"
+	"news-feed-bot/internal/model"
 )
 
 type ArticleProvider interface {
 	AllNotPosted(ctx context.Context, since time.Time, limit uint64) ([]model.Article, error)
-	MarkAsPosted(ctx context.Context, id int64) error
+	MarkAsPosted(ctx context.Context, article model.Article) error
 }
 
 type Summarizer interface {
-	Summarize(ctx context.Context, text string) (string, error)
+	Summarize(text string) (string, error)
 }
 
 type Notifier struct {
@@ -33,41 +36,73 @@ type Notifier struct {
 	channelID        int64            // id канала куда будет все поститься
 }
 
-func New(articles ArticleProvider, summarizer Summarizer, bot *tgbotapi.BotAPI, sendInterval, lookupTimeWindow time.Duration, channelID int64) *Notifier {
+func New(
+	articleProvider ArticleProvider,
+	summarizer Summarizer,
+	bot *tgbotapi.BotAPI,
+	sendInterval time.Duration,
+	lookupTimeWindow time.Duration,
+	channelID int64,
+) *Notifier {
 	return &Notifier{
-		articles:         articles,
+		articles:         articleProvider,
 		summarizer:       summarizer,
 		bot:              bot,
 		sendInterval:     sendInterval,
 		lookupTimeWindow: lookupTimeWindow,
+		channelID:        channelID,
+	}
+}
+
+func (n *Notifier) Start(ctx context.Context) error {
+	ticker := time.NewTicker(n.sendInterval)
+	defer ticker.Stop()
+
+	if err := n.SelectAndSendArticle(ctx); err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := n.SelectAndSendArticle(ctx); err != nil {
+				return err
+			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 }
 
 // !!! НУЖНО СДЕЛАТЬ РЕАЛИЗАЦИЮ КАК ТРАНЗАКЦИЮ
 func (n *Notifier) SelectAndSendArticle(ctx context.Context) error {
-	topOneAtricles, err := n.articles.AllNotPosted(ctx, time.Now().UTC().Add(-n.lookupTimeWindow), 1)
+	topOneArticles, err := n.articles.AllNotPosted(ctx, time.Now().Add(-n.lookupTimeWindow), 1)
 	if err != nil {
 		return err
 	}
 
-	if len(topOneAtricles) == 0 {
+	if len(topOneArticles) == 0 {
 		return nil
 	}
 
-	article := topOneAtricles[0]
+	article := topOneArticles[0]
 
-	sumamry, err := n.extractSummary(ctx, article)
-	//summary, err := n.summarizer.Summarize(ctx, article.Summary)
+	summary, err := n.extractSummary(article)
+	if err != nil {
+		slog.Error("Failed to extract summary: %v", sl.Err(err))
+	}
 
-	if err := n.sendArticle(article, sumamry); err != nil {
+	if err := n.sendArticle(article, summary); err != nil {
 		return err
 	}
 
-	return n.articles.MarkAsPosted(ctx, article.ID)
+	return n.articles.MarkAsPosted(ctx, article)
 }
 
+var redundantNewLines = regexp.MustCompile(`\n{3,}`) // эта регулярка соответствует всем последовательностям  от и более 3х пустых строк
+
 // добавили очистку html тегов, (go-readability), выводим отформированный текст
-func (n *Notifier) extractSummary(ctx context.Context, article model.Article) (string, error) {
+func (n *Notifier) extractSummary(article model.Article) (string, error) {
 	var r io.Reader
 
 	if article.Summary != "" {
@@ -87,7 +122,7 @@ func (n *Notifier) extractSummary(ctx context.Context, article model.Article) (s
 		return "", err
 	}
 
-	summary, err := n.summarizer.Summarize(ctx, cleanText(doc.TextContent))
+	summary, err := n.summarizer.Summarize(cleanupText(doc.TextContent))
 	if err != nil {
 		return "", err
 	}
@@ -95,9 +130,7 @@ func (n *Notifier) extractSummary(ctx context.Context, article model.Article) (s
 	return "\n\n" + summary, nil // пустые две строки тк перед самари будет заголовок
 }
 
-var redundantNewLines = regexp.MustCompile(`\n{3,}`) // эта регулярка соответствует всем последовательностям  от и более 3х пустых строк
-
-func cleanText(text string) string {
+func cleanupText(text string) string {
 	return redundantNewLines.ReplaceAllString(text, "\n")
 }
 

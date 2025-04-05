@@ -20,18 +20,18 @@ type OpenAISummarizer struct {
 	mu      sync.Mutex
 }
 
-func NewOpenAISummarizer(log *slog.Logger, apiKey, model, prompt string) *OpenAISummarizer {
+func NewOpenAISummarizer(apiKey, model, prompt string) *OpenAISummarizer {
 	s := &OpenAISummarizer{
 		client: openai.NewClient(apiKey),
 		prompt: prompt,
 		model:  model,
 	}
 
-	slog.Info("Openai summarizer is enabled", "enabled", apiKey != "")
-
 	if apiKey != "" {
 		s.enabled = true
 	}
+
+	slog.Info("Openai summarizer is enabled", "enabled", apiKey != "")
 
 	return s
 }

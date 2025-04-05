@@ -9,16 +9,26 @@ import (
 	"github.com/spf13/viper"
 )
 
+type DBConfig struct {
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	DBName   string `yaml:"dbname"`
+	SSLMode  string `yaml:"sslmode"`
+}
+
 type Config struct {
-	TelegramBotToken     string        `hcl:"telegram_bot_token" env:"TELEGRAM_BOT_TOKEN" required:"true"`
-	TelegramChannelID    int64         `hcl:"telegram_channel_id" env:"TELEGRAM_CHANNEL_ID" required:"true"`
-	DatabaseDSN          string        `hcl:"database_dsn" env:"DATABASE_DSN" default:"postgres://postgres:postgres@localhost:5432/news_feed_bot?sslmode=disable"`
-	FetchInterval        time.Duration `hcl:"fetch_interval" env:"FETCH_INTERVAL" default:"10m"`
-	NotificationInterval time.Duration `hcl:"notification_interval" env:"NOTIFICATION_INTERVAL" default:"1m"`
-	FilterKeywords       []string      `hcl:"filter_keywords" env:"FILTER_KEYWORDS"`
-	OpenAIKey            string        `hcl:"openai_key" env:"OPENAI_KEY"`
-	OpenAIPrompt         string        `hcl:"openai_prompt" env:"OPENAI_PROMPT"`
-	OpenAIModel          string        `hcl:"openai_model" env:"OPENAI_MODEL"`
+	Env                  string        `yaml:"env" env-default:"local"`
+	TelegramBotToken     string        `yaml:"telegram_bot_token"`
+	TelegramChannelID    int64         `yaml:"telegram_channel_id"`
+	FetchInterval        time.Duration `yaml:"fetch_interval"`
+	NotificationInterval time.Duration `yaml:"notification_interval"`
+	FilterKeywords       []string      `yaml:"filter_keywords"`
+	OpenAIKey            string        `yaml:"openai_key"`
+	OpenAIPrompt         string        `yaml:"openai_prompt"`
+	OpenAIModel          string        `yaml:"openai_model"`
+	Postgres             DBConfig      `yaml:"postgres"`
 }
 
 var (
@@ -32,7 +42,7 @@ func Get() Config {
 		v.SetEnvPrefix("NFB")
 		v.AutomaticEnv()
 
-		v.SetConfigType("hcl")
+		v.SetConfigType("yaml")
 		v.SetConfigName("config")
 		v.AddConfigPath(".")
 		v.AddConfigPath("$HOME/.config/news-feed-bot")
@@ -47,7 +57,7 @@ func Get() Config {
 		}
 
 		if err := v.Unmarshal(&cfg); err != nil {
-			slog.Error("config unmarshal error: %v", sl.Err(err))
+			slog.Error("Config unmarshal error: %v", sl.Err(err))
 		}
 	})
 

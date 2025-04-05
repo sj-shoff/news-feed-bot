@@ -85,16 +85,14 @@ func (s *ArticlePostgresStorage) AllNotPosted(ctx context.Context, since time.Ti
 // помечает статью как опубликованную
 func (s *ArticlePostgresStorage) MarkAsPosted(ctx context.Context, article model.Article) error {
 	conn, err := s.db.Connx(ctx)
-
 	if err != nil {
 		return err
 	}
-
 	defer conn.Close()
 
 	if _, err := conn.ExecContext(
 		ctx,
-		`UPDATE articles SET posted_at = $1::timestampt WHERE id = $2;`,
+		`UPDATE articles SET posted_at = $1::timestamp WHERE id = $2;`,
 		time.Now().UTC().Format(time.RFC3339),
 		article.ID,
 	); err != nil {
