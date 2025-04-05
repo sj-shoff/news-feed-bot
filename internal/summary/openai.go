@@ -3,129 +3,83 @@ package summary
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
-	"news-feed-bot/internal/logger/sl"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sashabaranov/go-openai"
 )
 
-type Summarizer interface {
-	Summarize(ctx context.Context, text string) (string, error)
-}
-
-type SummaryConfig struct {
-	Prompt      string
-	Model       string
-	MaxTokens   int
-	Temperature float32
-	TopP        float32
-}
-
 type OpenAISummarizer struct {
 	client  *openai.Client
-	config  SummaryConfig
-	logger  *slog.Logger
+	prompt  string
+	model   string
 	enabled bool
 	mu      sync.Mutex
 }
 
-func NewOpenAISummarizer(client *openai.Client, config SummaryConfig, log *slog.Logger) Summarizer {
-	enabled := client != nil
-	log = log.With(
-		slog.String("component", "OpenAISummarizer"),
-		slog.Bool("enabled", enabled),
-		slog.String("model", config.Model),
-	)
-
-	if enabled {
-		log.Info("initializing OpenAI summarizer")
+func NewOpenAISummarizer(log *slog.Logger, apiKey, model, prompt string) *OpenAISummarizer {
+	s := &OpenAISummarizer{
+		client: openai.NewClient(apiKey),
+		prompt: prompt,
+		model:  model,
 	}
 
-	return &OpenAISummarizer{
-		client:  client,
-		config:  config,
-		logger:  log,
-		enabled: enabled,
+	slog.Info("Openai summarizer is enabled", "enabled", apiKey != "")
+
+	if apiKey != "" {
+		s.enabled = true
 	}
+
+	return s
 }
 
-func (s *OpenAISummarizer) Summarize(ctx context.Context, text string) (string, error) {
+func (s *OpenAISummarizer) Summarize(text string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	log := s.logger
 	if !s.enabled {
-		log.Error("summarizer disabled")
-		return "", errors.New("OpenAI summarizer is disabled")
+		return "", fmt.Errorf("openai summarizer is disabled")
 	}
 
-	log.Debug("starting summarization")
+	request := openai.ChatCompletionRequest{
+		Model: s.model,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: s.prompt,
+			},
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: text,
+			},
+		},
+		MaxTokens:   1024,
+		Temperature: 1,
+		TopP:        1,
+	}
 
-	request := s.createRequest(text)
-	log.Debug("sending request to OpenAI")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
 
 	resp, err := s.client.CreateChatCompletion(ctx, request)
 	if err != nil {
-		log.Error("API request failed", sl.Err(err))
-		return "", errors.New("API request failed: " + err.Error())
-	}
-
-	summary, err := s.extractSummary(resp)
-	if err != nil {
-		log.Error("failed to extract summary", sl.Err(err))
 		return "", err
 	}
 
-	log.Debug("summarization completed",
-		slog.Int("result_length", len(summary)))
-
-	return summary, nil
-}
-
-func (s *OpenAISummarizer) createRequest(text string) openai.ChatCompletionRequest {
-	return openai.ChatCompletionRequest{
-		Model:       s.config.Model,
-		Messages:    s.createMessages(text),
-		MaxTokens:   s.config.MaxTokens,
-		Temperature: s.config.Temperature,
-		TopP:        s.config.TopP,
-	}
-}
-
-func (s *OpenAISummarizer) createMessages(text string) []openai.ChatCompletionMessage {
-	return []openai.ChatCompletionMessage{
-		{
-			Role:    openai.ChatMessageRoleSystem,
-			Content: s.config.Prompt,
-		},
-		{
-			Role:    openai.ChatMessageRoleUser,
-			Content: text,
-		},
-	}
-}
-
-func (s *OpenAISummarizer) extractSummary(resp openai.ChatCompletionResponse) (string, error) {
 	if len(resp.Choices) == 0 {
-		return "", errors.New("empty response from OpenAI")
+		return "", errors.New("no choices in openai response")
 	}
 
 	rawSummary := strings.TrimSpace(resp.Choices[0].Message.Content)
-	result := ensureSentenceEnding(rawSummary)
-	return result, nil
-}
-
-func ensureSentenceEnding(s string) string {
-	if strings.HasSuffix(s, ".") {
-		return s
+	if strings.HasSuffix(rawSummary, ".") {
+		return rawSummary, nil
 	}
 
-	lastDot := strings.LastIndex(s, ".")
-	if lastDot == -1 {
-		return s + "."
-	}
+	// cut all after the last ".":
+	sentences := strings.Split(rawSummary, ".")
 
-	return s[:lastDot+1]
+	return strings.Join(sentences[:len(sentences)-1], ".") + ".", nil
 }
