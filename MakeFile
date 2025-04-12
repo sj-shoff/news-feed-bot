@@ -1,9 +1,23 @@
 include .env
+export $(shell sed 's/=.*//' .env)  # Автоматический экспорт переменных из .env
+
+# Docker команды
+.PHONY: build run down migrate
+
 build:
-	docker-compose build news-feed-bot
+	docker compose build news-feed-bot
 
 run:
-	docker-compose up news-feed-bot
+	docker compose up news-feed-bot
+
+down:
+	docker compose down
 
 migrate:
-	migrate -path ./migrations/schema -database 'postgres://postgres:${POSTGRES_PASSWORD}@0.0.0.0:5438/news_feed_bot?sslmode=disable' up
+	migrate -path ./migrations/schema -database "postgres://postgres:$(POSTGRES_PASSWORD)@db:$(POSTGRES_PORT)/$(POSTGRES_DBNAME)?sslmode=disable" up -verbose
+
+migrate-down:
+	migrate -path ./migrations/schema -database "postgres://postgres:$(POSTGRES_PASSWORD)@db:$(POSTGRES_PORT)/$(POSTGRES_DBNAME)?sslmode=disable" down -verbose
+
+logs:
+	docker compose logs -f news-feed-bot
