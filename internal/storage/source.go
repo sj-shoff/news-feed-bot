@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/samber/lo"
 )
 
 type SourcePostgresStorage struct {
@@ -31,7 +30,11 @@ func (s *SourcePostgresStorage) Sources(ctx context.Context) ([]model.Source, er
 		return nil, err
 	}
 
-	return lo.Map(sources, func(source dbSource, _ int) model.Source { return model.Source(source) }), nil
+	result := make([]model.Source, len(sources))
+	for i, source := range sources {
+		result[i] = model.Source(source)
+	}
+	return result, nil
 }
 
 // получаем источник по его id

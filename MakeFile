@@ -1,5 +1,9 @@
+include .env
 build:
 	docker-compose build news-feed-bot
 
 run:
 	docker-compose up news-feed-bot
+
+migrate:
+	migrate -path ./migrations/schema -database 'postgres://postgres:${POSTGRES_PASSWORD}@0.0.0.0:5438/news_feed_bot?sslmode=disable' up

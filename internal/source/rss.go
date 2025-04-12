@@ -5,7 +5,6 @@ import (
 	"news-feed-bot/internal/model"
 
 	"github.com/SlyMarbo/rss"
-	"github.com/samber/lo"
 )
 
 type RSSSource struct {
@@ -29,8 +28,9 @@ func (s RSSSource) Fetch(ctx context.Context) ([]model.Item, error) {
 		return nil, err
 	}
 
-	return lo.Map(feed.Items, func(item *rss.Item, _ int) model.Item {
-		return model.Item{
+	items := make([]model.Item, len(feed.Items))
+	for i, item := range feed.Items {
+		items[i] = model.Item{
 			Title:      item.Title,
 			Categories: item.Categories,
 			Link:       item.Link,
@@ -38,7 +38,8 @@ func (s RSSSource) Fetch(ctx context.Context) ([]model.Item, error) {
 			Summary:    item.Summary,
 			SourceName: s.SourceName,
 		}
-	}), nil
+	}
+	return items, nil
 }
 
 func (RSSSource) loadFeed(ctx context.Context, url string) (*rss.Feed, error) {

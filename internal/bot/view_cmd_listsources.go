@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/samber/lo"
 
 	"news-feed-bot/internal/botkit"
 	"news-feed-bot/internal/model"
@@ -29,7 +28,7 @@ func ViewCmdListSource(lister SourceLister) botkit.CommandHandler {
 		})
 
 		var (
-			sourceInfos = lo.Map(sources, func(source model.Source, _ int) string { return formatSource(source) })
+			sourceInfos = make([]string, len(sources))
 			msgText     = fmt.Sprintf(
 				"Список источников \\(всего %d\\):\n\n%s",
 				len(sources),

@@ -1,5 +1,3 @@
--- +goose Up
--- +goose StatementBegin
 CREATE TABLE articles
 (
     id           BIGSERIAL PRIMARY KEY,
@@ -14,9 +12,3 @@ CREATE TABLE articles
             REFERENCES sources (id)
             ON DELETE CASCADE
 );
--- +goose StatementEnd
-
--- +goose Down
--- +goose StatementBegin
-DROP TABLE IF EXISTS articles;
--- +goose StatementEnd

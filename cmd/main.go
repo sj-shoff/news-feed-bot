@@ -146,7 +146,7 @@ func main() {
 	}(ctx)
 
 	go func(ctx context.Context) {
-		if err := http.ListenAndServe("9.0.0.0:8080", mux); err != nil {
+		if err := http.ListenAndServe("0.0.0.0:8088", mux); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Error("Failed to run http server: %v", sl.Err(err))
 				return

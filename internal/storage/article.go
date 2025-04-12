@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/samber/lo"
 )
 
 type ArticlePostgresStorage struct {
@@ -68,8 +67,9 @@ func (s *ArticlePostgresStorage) AllNotPosted(ctx context.Context, since time.Ti
 		return nil, err
 	}
 
-	return lo.Map(articles, func(article dbArticleWithPriority, _ int) model.Article {
-		return model.Article{
+	result := make([]model.Article, len(articles))
+	for i, article := range articles {
+		result[i] = model.Article{
 			ID:          article.ID,
 			SourceID:    article.SourceID,
 			Title:       article.Title,
@@ -78,7 +78,8 @@ func (s *ArticlePostgresStorage) AllNotPosted(ctx context.Context, since time.Ti
 			PublishedAt: article.PublishedAt,
 			CreatedAt:   article.CreatedAt,
 		}
-	}), nil
+	}
+	return result, nil
 }
 
 // помечает статью как опубликованную

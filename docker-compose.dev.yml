@@ -3,16 +3,36 @@ version: '3.8'
 services:
   db:
     image: postgres:15
-    restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: news_feed_bot
       PGDATA: /var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "5438:5438"
     volumes:
-      - db:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  news-feed-bot:
+    build: .
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5438
+      DB_USER: postgres
+      DB_NAME: news_feed_bot
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      CONFIG_PATH: /api/config/config.yaml
 
 volumes:
-  db:
+  postgres_data:
