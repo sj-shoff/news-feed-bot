@@ -13,7 +13,7 @@ postgres:
   dbname: news_feed_bot
   sslmode: disable
 bot:
-  telegram_bot_token: "${TELEGRAM_TOKEN}
+  telegram_bot_token: "${TELEGRAM_TOKEN}"
   telegram_channel_id: 123456789
   fetch_interval: "10m"
   notification_interval: "1m"

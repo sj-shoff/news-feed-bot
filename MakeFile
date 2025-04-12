@@ -1,0 +1,5 @@
+build:
+	docker-compose build news-feed-bot
+
+run:
+	docker-compose up news-feed-bot

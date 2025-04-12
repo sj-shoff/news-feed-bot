@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
+	"news-feed-bot/internal/bot"
+	"news-feed-bot/internal/bot/middleware"
+	"news-feed-bot/internal/botkit"
 	"news-feed-bot/internal/config"
 	"news-feed-bot/internal/fetcher"
 	"news-feed-bot/internal/logger/sl"
@@ -12,6 +16,7 @@ import (
 	"news-feed-bot/internal/storage"
 	"news-feed-bot/internal/storage/postgres"
 	"news-feed-bot/internal/summary"
+
 	"os/signal"
 	"syscall"
 
@@ -73,29 +78,87 @@ func main() {
 		)
 	)
 
+	newsBot := botkit.New(botAPI)
+	newsBot.RegisterCommand(
+		"addsource",
+		middleware.AdminsOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdAddSource(sourceStorage),
+		),
+	)
+	newsBot.RegisterCommand(
+		"setpriority",
+		middleware.AdminsOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdSetPriority(sourceStorage),
+		),
+	)
+	newsBot.RegisterCommand(
+		"getsource",
+		middleware.AdminsOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdGetSource(sourceStorage),
+		),
+	)
+	newsBot.RegisterCommand(
+		"listsources",
+		middleware.AdminsOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdListSource(sourceStorage),
+		),
+	)
+	newsBot.RegisterCommand(
+		"deletesource",
+		middleware.AdminsOnly(
+			config.Get().TelegramChannelID,
+			bot.ViewCmdDeleteSource(sourceStorage),
+		),
+	)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	go func(ctx context.Context) {
 		if err := fetcher.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Failed to start fetcher", sl.Err(err))
+				log.Error("Failed to run fetcher: %v", sl.Err(err))
 				return
 			}
 
-			log.Error("Fetcher stopped")
+			log.Info("Fetcher stopped")
 		}
 	}(ctx)
 
 	go func(ctx context.Context) {
 		if err := notifier.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Failed to start notifier", sl.Err(err))
+				log.Error("Failed to run notifier: %v", sl.Err(err))
 				return
 			}
 
+			log.Info("Notifier stopped")
 		}
 	}(ctx)
+
+	go func(ctx context.Context) {
+		if err := http.ListenAndServe("9.0.0.0:8080", mux); err != nil {
+			if !errors.Is(err, context.Canceled) {
+				log.Error("Failed to run http server: %v", sl.Err(err))
+				return
+			}
+
+			log.Info("Http server stopped")
+		}
+	}(ctx)
+
+	if err := newsBot.Run(ctx); err != nil {
+		log.Error("Failed to run botkit: %v", sl.Err(err))
+	}
 }
 
 func setupLogger(env string) *slog.Logger {

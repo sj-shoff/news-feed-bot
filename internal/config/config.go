@@ -39,7 +39,6 @@ var (
 func Get() Config {
 	once.Do(func() {
 		v := viper.New()
-		v.SetEnvPrefix("NFB")
 		v.AutomaticEnv()
 
 		v.SetConfigType("yaml")
