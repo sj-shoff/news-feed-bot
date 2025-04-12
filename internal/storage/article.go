@@ -22,11 +22,10 @@ func NewArticleStorage(db *sqlx.DB) *ArticlePostgresStorage {
 // сохранение статьи в бд
 func (s *ArticlePostgresStorage) Store(ctx context.Context, article model.Article) error {
 	conn, err := s.db.Connx(ctx)
-	defer conn.Close()
-
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	if _, err := conn.ExecContext(ctx, `INSERT INTO articles (source_id, title, link, summary, published_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING;`, article.SourceID, article.Title, article.Link, article.Summary, article.PublishedAt); err != nil {
 		return err
