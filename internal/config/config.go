@@ -4,11 +4,9 @@ import (
 	"log/slog"
 	"news-feed-bot/internal/logger/sl"
 	"os"
-	"path/filepath"
-	"sync"
 	"time"
 
-	"github.com/spf13/viper"
+	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type DBConfig struct {
@@ -21,57 +19,33 @@ type DBConfig struct {
 }
 
 type Config struct {
-	Env                  string        `yaml:"env" env-default:"local"`
-	TelegramBotToken     string        `yaml:"telegram_bot_token"`
-	TelegramChannelID    int64         `yaml:"telegram_channel_id"`
-	FetchInterval        time.Duration `yaml:"fetch_interval"`
-	NotificationInterval time.Duration `yaml:"notification_interval"`
-	FilterKeywords       []string      `yaml:"filter_keywords"`
-	OpenAIKey            string        `yaml:"openai_key"`
-	OpenAIPrompt         string        `yaml:"openai_prompt"`
-	OpenAIModel          string        `yaml:"openai_model"`
+	TelegramBotToken     string        `yaml:"telegram_bot_token" env:"BOT_TOKEN" required:"true"`
+	TelegramChannelID    int64         `yaml:"telegram_channel_id" env:"TELEGRAM_CHANNEL_ID" required:"true"`
+	FetchInterval        time.Duration `yaml:"fetch_interval" env:"FETCH_INTERVAL" default:"10m"`
+	NotificationInterval time.Duration `yaml:"notification_interval" env:"NOTIFICATION_INTERVAL" default:"1m"`
+	FilterKeywords       []string      `yaml:"filter_keywords" env:"FILTER_KEYWORDS"`
+	OpenAIKey            string        `yaml:"openai_key" env:"OPENAI_KEY"`
+	OpenAIPrompt         string        `yaml:"openai_prompt" env:"OPENAI_PROMPT"`
+	OpenAIModel          string        `yaml:"openai_model" env:"OPENAI_MODEL" default:"gpt-3.5-turbo"`
 	Postgres             DBConfig      `yaml:"postgres"`
+	Env                  string        `yaml:"env" env-default:"local"`
 }
 
-var (
-	cfg  Config
-	once sync.Once
-)
+func Get() *Config {
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		slog.Error("CONFIG_PATH is not set")
+	}
 
-func Get() Config {
-	once.Do(func() {
-		v := viper.New()
-		v.AutomaticEnv()
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		slog.Error("Config file does not exist: %s", configPath, sl.Err(err))
+	}
 
-		configPath := os.Getenv("CONFIG_PATH")
-		if configPath == "" {
-			exePath, err := os.Executable()
-			if err != nil {
-				panic("failed to get executable path: " + err.Error())
-			}
-			configPath = filepath.Join(filepath.Dir(exePath), "config", "config.yaml")
-		}
+	var cfg Config
 
-		slog.Info("Loading configuration", "path", configPath)
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		slog.Error("Cannot read config: %s", sl.Err(err))
+	}
 
-		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			slog.Error("Config file not found", sl.Err(err))
-			panic("config file not found at " + configPath)
-		}
-
-		v.SetConfigFile(configPath)
-
-		if err := v.ReadInConfig(); err != nil {
-			slog.Error("Failed to read config", sl.Err(err))
-			panic(err)
-		}
-
-		if err := v.Unmarshal(&cfg); err != nil {
-			slog.Error("Failed to unmarshal config", sl.Err(err))
-			panic(err)
-		}
-
-	})
-
-	return cfg
+	return &cfg
 }

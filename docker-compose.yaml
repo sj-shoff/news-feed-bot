@@ -1,41 +1,35 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 03032006
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - newsfeed
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
   news-feed-bot:
     build: .
-    networks:
-      - newsfeed
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "8088:8088"
     environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: 03032006
-      DB_NAME: postgres
+      BOT_TOKEN: "${BOT_TOKEN}"
       CONFIG_PATH: /app/config/config.yaml
-
-networks:
-  newsfeed:
-    driver: bridge
-
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DBNAME: postgres
+      FILTER_KEYWORDS: "Инвестиции, деньги, прибыль, куда вложиться, вложения, акции, трейдинг, арбитраж, выгодные вклады, выгодные сделки" # Здесь указан FILTER_KEYWORDS
 volumes:
   postgres_data:

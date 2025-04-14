@@ -46,7 +46,7 @@ func ViewCmdAddSource(storage SourceStorage) botkit.CommandHandler {
 			reply = tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 		)
 
-		reply.ParseMode = "parseModeMarkdownV2"
+		reply.ParseMode = "MarkdownV2"
 
 		if _, err := bot.Send(reply); err != nil {
 			return err

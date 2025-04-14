@@ -1,5 +1,4 @@
 include .env
-export $(shell sed 's/=.*//' .env)  # Автоматический экспорт переменных из .env
 
 build:
 	docker compose build news-feed-bot
@@ -11,10 +10,7 @@ down:
 	docker compose down
 
 migrate:
-	migrate -path ./migrations/schema -database "postgres://postgres:$(POSTGRES_PASSWORD)@db:$(POSTGRES_PORT)/$(POSTGRES_DBNAME)?sslmode=disable" up -verbose
-
-migrate-down:
-	migrate -path ./migrations/schema -database "postgres://postgres:$(POSTGRES_PASSWORD)@db:$(POSTGRES_PORT)/$(POSTGRES_DBNAME)?sslmode=disable" down -verbose
+	migrate -path ./migrations/schema -database 'postgres://postgres:${POSTGRES_PASSWORD}@0.0.0.0:5432/postgres?sslmode=disable' up
 
 logs:
 	docker compose logs -f news-feed-bot

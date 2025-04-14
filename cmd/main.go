@@ -41,9 +41,9 @@ func main() {
 		slog.String("version", "1.0"),
 	)
 
-	botAPI, err := tgbotapi.NewBotAPI(os.Getenv("BOT_TOKEN"))
+	botAPI, err := tgbotapi.NewBotAPI(config.Get().TelegramBotToken)
 	if err != nil {
-		slog.Info("Failed to create bot", sl.Err(err))
+		slog.Error("Failed to create bot", sl.Err(err))
 		return
 	}
 
@@ -126,7 +126,7 @@ func main() {
 	go func(ctx context.Context) {
 		if err := fetcher.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Failed to run fetcher: %v", sl.Err(err))
+				log.Error("Failed to run fetcher: ", sl.Err(err))
 				return
 			}
 
@@ -137,7 +137,7 @@ func main() {
 	go func(ctx context.Context) {
 		if err := notifier.Start(ctx); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Failed to run notifier: %v", sl.Err(err))
+				log.Error("Failed to run notifier: ", sl.Err(err))
 				return
 			}
 
@@ -148,7 +148,7 @@ func main() {
 	go func(ctx context.Context) {
 		if err := http.ListenAndServe("0.0.0.0:8088", mux); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Failed to run http server: %v", sl.Err(err))
+				log.Error("Failed to run http server: ", sl.Err(err))
 				return
 			}
 
@@ -157,7 +157,7 @@ func main() {
 	}(ctx)
 
 	if err := newsBot.Run(ctx); err != nil {
-		log.Error("Failed to run botkit: %v", sl.Err(err))
+		log.Error("Failed to run botkit: ", sl.Err(err))
 	}
 }
 

@@ -9,18 +9,27 @@ http_server:
 
 postgres:
   host: db
-  port: "5432" 
+  port: "5432"
   username: postgres
-  password: ${POSTGRES_PASSWORD}
+  password: 03032006
   dbname: postgres
   sslmode: disable
 
-bot:
-  telegram_bot_token: "${BOT_TOKEN}"
-  telegram_channel_id: "${TELEGRAM_CHANNEL_ID}"
-  fetch_interval: ${FETCH_INTERVAL}
-  notification_interval: ${NOTIFICATION_INTERVAL}
-  filter_keywords: ${FILTER_KEYWORDS}
-  openai_key: "${OPENAI_KEY}"
-  openai_prompt: "${OPENAI_PROMPT}"
-  openai_model: "${OPENAI_MODEL}"
+telegram_bot_token: "8047581497:AAFfBd3OhJNdeLHQWthjgW8eS_TWjJVximk"
+telegram_channel_id: -1002617132707
+fetch_interval: 15m
+notification_interval: 120m
+filter_keywords:
+  - Инвестиции
+  - деньги
+  - прибыль
+  - куда вложиться
+  - вложения
+  - акции
+  - трейдинг
+  - арбитраж
+  - выгодные вклады
+  - выгодные сделки
+openai_key: "g4a-xf2UNx7OX9CsHIkncmjIyNAxHF2fjr4tCIp"
+openai_prompt: "Сделай саммари на русском языке"
+openai_model: "gpt-4o-mini"

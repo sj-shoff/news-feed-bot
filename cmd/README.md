@@ -20,3 +20,8 @@ docker system prune -a
 
 docker-compose down -v && docker-compose up --build
 ```
+
+### "Убить" все подключения на порту
+```bash
+kill $(lsof -t -i:5432)
+```
