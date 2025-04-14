@@ -17,7 +17,7 @@ Telegram-бот для автоматического сбора новосте�
 
 ## Технологии
 
-- **Backend**: Go, slog (+slogpretty)
+- **Backend**: Go, slog (+slogpretty), <a href="https://github.com/sashabaranov/go-openai">go-openai</a>, <a href="https://github.com/SlyMarbo/rss">rss</a>
 - **Базы данных**: PostgreSQL, <a href="https://github.com/jmoiron/sqlx">sqlx</a>
 - **AI**: OpenAI API
 - **Инфраструктура**: Docker, Docker-compose, Makefile
