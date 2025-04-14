@@ -1,26 +1,26 @@
-env: "${ENV}" # local, dev, prod
+env: "local"
 
 http_server:
   address: "0.0.0.0:8088"
   timeout: 4s
   idle_timeout: 60s
-  user: "${HTTP_USER}"
-  password: "${HTTP_PASSWORD}"
+  user: "sj_shoff"
+  password: ${HTTP_PASSWORD}
 
 postgres:
-  host: "${POSTGRES_HOST}"
-  port: "${POSTGRES_PORT}"
-  username: "${POSTGRES_USER}"
-  password: "${POSTGRES_PASSWORD}"
-  dbname: "${POSTGRES_DBNAME}"
+  host: db
+  port: "5432" 
+  username: postgres
+  password: ${POSTGRES_PASSWORD}
+  dbname: postgres
   sslmode: disable
 
 bot:
-  telegram_bot_token: "${TELEGRAM_TOKEN}"
+  telegram_bot_token: "${BOT_TOKEN}"
   telegram_channel_id: "${TELEGRAM_CHANNEL_ID}"
-  fetch_interval: "${FETCH_INTERVAL}"
-  notification_interval: "${NOTIFICATION_INTERVAL}"
-  filter_keywords: ${FILTER_KEYWORDS} # будет преобразовано в список
+  fetch_interval: ${FETCH_INTERVAL}
+  notification_interval: ${NOTIFICATION_INTERVAL}
+  filter_keywords: ${FILTER_KEYWORDS}
   openai_key: "${OPENAI_KEY}"
   openai_prompt: "${OPENAI_PROMPT}"
   openai_model: "${OPENAI_MODEL}"

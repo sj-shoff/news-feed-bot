@@ -3,6 +3,8 @@ package config
 import (
 	"log/slog"
 	"news-feed-bot/internal/logger/sl"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -41,23 +43,34 @@ func Get() Config {
 		v := viper.New()
 		v.AutomaticEnv()
 
-		v.SetConfigType("yaml")
-		v.SetConfigName("config")
-		v.AddConfigPath(".")
-		v.AddConfigPath("$HOME/.config/news-feed-bot")
-
-		if err := v.ReadInConfig(); err == nil {
-			slog.Info("Using config:", "config_file", v.ConfigFileUsed())
+		configPath := os.Getenv("CONFIG_PATH")
+		if configPath == "" {
+			exePath, err := os.Executable()
+			if err != nil {
+				panic("failed to get executable path: " + err.Error())
+			}
+			configPath = filepath.Join(filepath.Dir(exePath), "config", "config.yaml")
 		}
 
-		v.SetConfigName("config.local")
-		if err := v.MergeInConfig(); err == nil {
-			slog.Info("Using local config:", "config_file", v.ConfigFileUsed())
+		slog.Info("Loading configuration", "path", configPath)
+
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			slog.Error("Config file not found", sl.Err(err))
+			panic("config file not found at " + configPath)
+		}
+
+		v.SetConfigFile(configPath)
+
+		if err := v.ReadInConfig(); err != nil {
+			slog.Error("Failed to read config", sl.Err(err))
+			panic(err)
 		}
 
 		if err := v.Unmarshal(&cfg); err != nil {
-			slog.Error("Config unmarshal error: %v", sl.Err(err))
+			slog.Error("Failed to unmarshal config", sl.Err(err))
+			panic(err)
 		}
+
 	})
 
 	return cfg

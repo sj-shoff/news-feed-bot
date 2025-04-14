@@ -1,9 +1,6 @@
 include .env
 export $(shell sed 's/=.*//' .env)  # Автоматический экспорт переменных из .env
 
-# Docker команды
-.PHONY: build run down migrate
-
 build:
 	docker compose build news-feed-bot
 
