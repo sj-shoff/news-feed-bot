@@ -17,7 +17,7 @@ Telegram-бот для автоматического сбора новосте�
 
 ## Технологии
 
-- **Backend**: Go, slog, <a href="https://github.com/spf13/viper">spf13/viper</a>
+- **Backend**: Go, slog (+slogpretty)
 - **Базы данных**: PostgreSQL, <a href="https://github.com/jmoiron/sqlx">sqlx</a>
 - **AI**: OpenAI API
 - **Инфраструктура**: Docker, Docker-compose, Makefile
