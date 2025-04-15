@@ -16,7 +16,7 @@ Telegram-бот для автоматического сбора новосте�
 - **Автопубликация**: Планирование постов в Telegram-канал с поддержкой Markdown.
 
 ## Технологии
-github.com/go-telegram-bot-api/telegram-bot-api/v5
+
 - **Backend**: Go, slog (+slogpretty), <a href="https://github.com/sashabaranov/go-openai">go-openai</a>, <a href="https://github.com/SlyMarbo/rss">rss</a>, <a href="https://github.com/golang-migrate/migrate">golang-migrate</a>, <a href="https://github.com/go-telegram-bot-api/telegram-bot-api/v5">go-telegram-bot-api</a>, <a href="https://github.com/jmoiron/sqlx">sqlx</a>
 - **Базы данных**: PostgreSQL
 - **AI**: OpenAI API
