@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"news-feed-bot/internal/logger/sl"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -19,14 +20,14 @@ type DBConfig struct {
 }
 
 type Config struct {
-	TelegramBotToken     string        `yaml:"telegram_bot_token" env:"BOT_TOKEN" required:"true"`
-	TelegramChannelID    int64         `yaml:"telegram_channel_id" env:"TELEGRAM_CHANNEL_ID" required:"true"`
+	TelegramBotToken     string        `env:"BOT_TOKEN" required:"true"`
+	TelegramChannelID    int64         `env:"TELEGRAM_CHANNEL_ID" required:"true"`
 	FetchInterval        time.Duration `yaml:"fetch_interval" env:"FETCH_INTERVAL" default:"10m"`
 	NotificationInterval time.Duration `yaml:"notification_interval" env:"NOTIFICATION_INTERVAL" default:"1m"`
 	FilterKeywords       []string      `yaml:"filter_keywords" env:"FILTER_KEYWORDS"`
-	OpenAIKey            string        `yaml:"openai_key" env:"OPENAI_KEY"`
-	OpenAIPrompt         string        `yaml:"openai_prompt" env:"OPENAI_PROMPT"`
-	OpenAIModel          string        `yaml:"openai_model" env:"OPENAI_MODEL" default:"gpt-3.5-turbo"`
+	OpenAIKey            string        `env:"OPENAI_KEY" required:"true"`
+	OpenAIPrompt         string        `yaml:"openai_prompt"`
+	OpenAIModel          string        `yaml:"openai_model"`
 	Postgres             DBConfig      `yaml:"postgres"`
 	Env                  string        `yaml:"env" env-default:"local"`
 }
@@ -46,6 +47,11 @@ func Get() *Config {
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		slog.Error("Cannot read config: %s", sl.Err(err))
 	}
+
+	cfg.TelegramBotToken = os.Getenv("BOT_TOKEN")
+	cfg.OpenAIKey = os.Getenv("OPENAI_KEY")
+	cfg.TelegramChannelID, _ = strconv.ParseInt(os.Getenv("TELEGRAM_CHANNEL_ID"), 10, 64)
+	cfg.Postgres.Password = os.Getenv("POSTGRES_PASSWORD")
 
 	return &cfg
 }

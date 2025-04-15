@@ -28,8 +28,14 @@ func ViewCmdListSource(lister SourceLister) botkit.CommandHandler {
 		})
 
 		var (
-			sourceInfos = make([]string, len(sources))
-			msgText     = fmt.Sprintf(
+			sourceInfos = func() []string {
+				infos := make([]string, 0, len(sources))
+				for _, source := range sources {
+					infos = append(infos, formatSource(source))
+				}
+				return infos
+			}()
+			msgText = fmt.Sprintf(
 				"Список источников \\(всего %d\\):\n\n%s",
 				len(sources),
 				strings.Join(sourceInfos, "\n\n"),

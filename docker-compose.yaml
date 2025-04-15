@@ -30,6 +30,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DBNAME: postgres
-      FILTER_KEYWORDS: "Инвестиции, деньги, прибыль, куда вложиться, вложения, акции, трейдинг, арбитраж, выгодные вклады, выгодные сделки" # Здесь указан FILTER_KEYWORDS
+      FILTER_KEYWORDS: "Инвестиции, деньги, прибыль, вложения, акции, трейдинг, арбитраж, выгодные вклады, выгодные сделки"
 volumes:
   postgres_data:

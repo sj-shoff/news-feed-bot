@@ -1,35 +1,23 @@
 env: "local"
 
-http_server:
-  address: "0.0.0.0:8088"
-  timeout: 4s
-  idle_timeout: 60s
-  user: "sj_shoff"
-  password: ${HTTP_PASSWORD}
-
 postgres:
   host: db
   port: "5432"
   username: postgres
-  password: 03032006
   dbname: postgres
   sslmode: disable
 
-telegram_bot_token: "8047581497:AAFfBd3OhJNdeLHQWthjgW8eS_TWjJVximk"
-telegram_channel_id: -1002617132707
-fetch_interval: 15m
-notification_interval: 120m
+fetch_interval: 5m
+notification_interval: 10m
 filter_keywords:
   - Инвестиции
   - деньги
   - прибыль
-  - куда вложиться
   - вложения
   - акции
   - трейдинг
   - арбитраж
   - выгодные вклады
   - выгодные сделки
-openai_key: "g4a-xf2UNx7OX9CsHIkncmjIyNAxHF2fjr4tCIp"
 openai_prompt: "Сделай саммари на русском языке"
 openai_model: "gpt-4o-mini"
