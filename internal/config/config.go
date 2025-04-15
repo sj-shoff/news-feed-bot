@@ -14,7 +14,7 @@ type DBConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Password string `env:"POSTGRES_PASSWORD"`
 	DBName   string `yaml:"dbname"`
 	SSLMode  string `yaml:"sslmode"`
 }
@@ -22,9 +22,9 @@ type DBConfig struct {
 type Config struct {
 	TelegramBotToken     string        `env:"BOT_TOKEN" required:"true"`
 	TelegramChannelID    int64         `env:"TELEGRAM_CHANNEL_ID" required:"true"`
-	FetchInterval        time.Duration `yaml:"fetch_interval" env:"FETCH_INTERVAL" default:"10m"`
-	NotificationInterval time.Duration `yaml:"notification_interval" env:"NOTIFICATION_INTERVAL" default:"1m"`
-	FilterKeywords       []string      `yaml:"filter_keywords" env:"FILTER_KEYWORDS"`
+	FetchInterval        time.Duration `yaml:"fetch_interval"`
+	NotificationInterval time.Duration `yaml:"notification_interval"`
+	FilterKeywords       []string      `yaml:"filter_keywords"`
 	OpenAIKey            string        `env:"OPENAI_KEY" required:"true"`
 	OpenAIPrompt         string        `yaml:"openai_prompt"`
 	OpenAIModel          string        `yaml:"openai_model"`
